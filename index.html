@@ -207,15 +207,8 @@ muteBtn.addEventListener('click',()=>{
   if(muted){ bgm.pause(); muteBtn.textContent="🔇"; } 
   else { if(active){ bgm.play(); } muteBtn.textContent="🔊"; }
 });
-
-// cek orientasi awal
-function checkOrientation(){
-  if(window.innerHeight > window.innerWidth){
-    alert("Putar HP ke mode landscape untuk main lebih nyaman!");
-  }
-}
-checkOrientation();
 </script>
 </body>
 </html>
+
 
