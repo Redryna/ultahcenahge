@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Mini Catch Game - Scrapbook</title>
+  <style>
+    :root{--bg:#fdeef6;--panel:#fff;--accent:#ff6b9a}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial}
+    .wrap{display:flex;flex-direction:column;height:100%;gap:8px;padding:12px;background:linear-gradient(180deg,var(--bg),#fff)}
+    h1{font-size:20px;margin:0;color:#333;text-align:center}
+    button{background:var(--accent);color:white;border:0;padding:10px 14px;border-radius:10px;font-weight:600}
+    .game-area{position:relative;flex:1;border-radius:14px;background:linear-gradient(180deg,#fff,#ffeef6);overflow:hidden;border:2px solid rgba(0,0,0,0.1)}
+    .basket{position:absolute;bottom:10px;width:100px;height:60px;background:linear-gradient(180deg,#ffd7e3,#ffbcd0);border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 10px rgba(0,0,0,0.2)}
+    .item{position:absolute;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px}
+    .hud{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
+    .inventory{display:flex;gap:6px;flex-wrap:wrap;padding:6px;background:#fff8;border-radius:10px}
+    .inv-item{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
+    .center-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+    .center-overlay button{font-size:18px;padding:12px 20px}
+    .center-overlay p{margin-top:10px;color:#555;font-weight:600}
+    #scrapBtn{display:none;margin-top:8px}
+    #muteBtn{position:absolute;top:10px;right:10px;background:#fff;border:1px solid #ccc;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎁 Tangkap Hadiah 🎁</h1>
+  <div class="hud">
+    <div>⏳ <span id="time">30</span>s</div>
+    <div>⭐ <span id="score">0</span></div>
+  </div>
+
+  <div class="game-area" id="gameArea">
+    <div class="basket" id="basket">🧺</div>
+    <!-- Overlay Start -->
+    <div class="center-overlay" id="overlay">
+      <button id="startBtn">Mulai</button>
+      <p>KUMPULKAN POINT 300 UNTUK MEMBUKA SCRAPBOOK</p>
+      <p>Cara Bermain Tekan Keranjang Dan Dapatkan Item</p>
+    </div>
+    <button id="muteBtn">🔊</button>
+  </div>
+
+  <h3>Inventory</h3>
+  <div class="inventory" id="inventory"></div>
+  <button id="scrapBtn" onclick="location.href='gelo.html'">📖 Buka Scrapbook</button>
+</div>
+
+<!-- BackSound & SFX -->
+<audio id="bgm" src="backsound.mp3" preload="auto" loop></audio>
+<audio id="catchSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
+
+<script>
+const GAME_TIME = 30;
+const SPAWN_INTERVAL = 900;
+const ITEM_TYPES = [
+  {label:'❤', name:'Love'},
+  {label:'🌸', name:'Flower'},
+  {label:'⭐', name:'Star'},
+  {label:'🎵', name:'Note'},
+  {label:'📷', name:'Photo'}
+];
+
+const STORAGE_KEY='scrapbook_items_v1';
+function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]') }catch{ return [] }}
+function save(arr){ localStorage.setItem(STORAGE_KEY,JSON.stringify(arr)) }
+function addItem(it){ let arr=load(); arr.push(it); save(arr); renderInventory() }
+function renderInventory(){ let arr=load(); let inv=document.getElementById('inventory'); inv.innerHTML=''; arr.slice(-12).forEach(it=>{ let d=document.createElement('div'); d.className='inv-item'; d.textContent=it.label; inv.appendChild(d) }) }
+
+const gameArea=document.getElementById('gameArea');
+const basket=document.getElementById('basket');
+const timeEl=document.getElementById('time');
+const scoreEl=document.getElementById('score');
+const startBtn=document.getElementById('startBtn');
+const overlay=document.getElementById('overlay');
+const scrapBtn=document.getElementById('scrapBtn');
+const catchSound=document.getElementById('catchSound');
+const bgm=document.getElementById('bgm');
+const muteBtn=document.getElementById('muteBtn');
+
+let width,height,basketX=0;
+let spawnTimer=null,gameTimer=null,left=GAME_TIME,score=0,active=false,muted=false;
+
+function recalc(){ let r=gameArea.getBoundingClientRect(); width=r.width; height=r.height; basketX=width/2-basket.offsetWidth/2; basket.style.left=basketX+'px' }
+window.addEventListener('resize',recalc); recalc(); renderInventory();
+
+function moveBasket(x){ let rect=gameArea.getBoundingClientRect(); let pos=x-rect.left-basket.offsetWidth/2; pos=Math.max(0,Math.min(pos,width-basket.offsetWidth)); basket.style.left=pos+'px' }
+gameArea.addEventListener('touchmove',e=>{ moveBasket(e.touches[0].clientX) });
+gameArea.addEventListener('click',e=>{ moveBasket(e.clientX) });
+
+function spawnItem(){
+  let type=ITEM_TYPES[Math.floor(Math.random()*ITEM_TYPES.length)];
+  let el=document.createElement('div'); el.className='item'; el.textContent=type.label;
+  let x=Math.random()*(width-40); el.style.left=x+'px'; el.style.top='-40px';
+  gameArea.appendChild(el);
+  let start=performance.now(),duration=3500;
+  function anim(t){ let p=(t-start)/duration; if(p>1){el.remove();return} el.style.top=(p*(height-80))+'px';
+    if(collide(el.getBoundingClientRect(),basket.getBoundingClientRect())){ catchItem(el,type); return }
+    requestAnimationFrame(anim)
+  }
+  requestAnimationFrame(anim)
+}
+
+function collide(a,b){return !(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom)}
+function catchItem(el,type){ 
+  score+=10; scoreEl.textContent=score; 
+  if(!muted){ catchSound.currentTime=0; catchSound.play(); }
+  addItem({label:type.label,name:type.name,time:Date.now()}); 
+  el.remove();
+  if(score>=300){ scrapBtn.style.display='block'; }
+}
+
+function startGame(){ 
+  if(active) return; 
+  active=true; score=0;scoreEl.textContent=score;left=GAME_TIME;timeEl.textContent=left;
+  overlay.style.display='none';
+  // play backsound
+  if(!muted){ bgm.currentTime=0; bgm.play(); }
+  spawnTimer=setInterval(spawnItem,SPAWN_INTERVAL);
+  gameTimer=setInterval(()=>{ left--; timeEl.textContent=left; if(left<=0) endGame() },1000);
+  spawnItem();
+}
+function endGame(){ 
+  active=false; 
+  clearInterval(spawnTimer);clearInterval(gameTimer);
+  spawnTimer=null;gameTimer=null;
+  bgm.pause();
+  overlay.style.display='flex'; startBtn.disabled=false;
+}
+
+startBtn.addEventListener('click',startGame);
+muteBtn.addEventListener('click',()=>{ 
+  muted=!muted; 
+  if(muted){ bgm.pause(); muteBtn.textContent="🔇"; } 
+  else { if(active){ bgm.play(); } muteBtn.textContent="🔊"; }
+});
+</script>
+</body>
+</html>

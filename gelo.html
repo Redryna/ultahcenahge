@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Buku Interaktif</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="book" id="book">
+    <!-- COVER DEPAN -->
+    <div class="cover" id="cover">
+      <div class="front"><h1>SECRET BOOK</h1></div>
+      <div class="back"></div>
+    </div>
+
+    <!-- PAGE 1 -->
+    <div class="page">
+      <div class="front"><img src="depan.png" alt="Halaman 1 Depan"></div>
+      <div class="back"><img src="belakang.png" alt="Halaman 1 Belakang"></div>
+    </div>
+
+    <!-- PAGE 2 -->
+    <div class="page">
+      <div class="front"><img src="depan1.png" alt="Halaman 2 Depan"></div>
+      <div class="back"><img src="belakang1.png" alt="Halaman 2 Belakang"></div>
+    </div>
+
+    <div class="page">
+      <div class="front"><img src="depan2.png" alt="Halaman 3 Depan"></div>
+      <div class="back"><img src="belakang2.png" alt="Halaman 3 Belakang"></div>
+    </div>
+
+    <!-- COVER BELAKANG -->
+    <div class="back-cover" id="backcover">
+  <div class="front">
+    <p>The End</p>
+  </div>
+  <div class="back"></div>
+</div>
+
+  <script>
+    const book = document.getElementById('book');
+    const cover = document.getElementById('cover');
+    const pages = Array.from(book.querySelectorAll('.page'));
+
+    const COVER_FRONT_Z = 150;
+    const COVER_BACK_Z = 50;
+    const PAGE_Z_BASE = 100;
+
+    let flippedCount = 0;
+    let coverClosed = true;
+    let isAnimating = false;
+
+    function initStack() {
+      cover.style.zIndex = COVER_FRONT_Z;
+      cover.style.transform = 'rotateY(0deg)';
+      pages.forEach((p, i) => {
+        p.style.transform = 'rotateY(0deg)';
+        p.style.zIndex = PAGE_Z_BASE + (pages.length - i);
+      });
+    }
+
+    function updateStack() {
+  pages.forEach((p, i) => {
+    if (i < flippedCount) {
+      // halaman sudah dibuka → biar tetap terlihat di kiri
+      p.style.transform = 'rotateY(-180deg)';
+      p.style.zIndex = PAGE_Z_BASE + i;  // kasih z-index cukup, jangan terlalu kecil
+    } else {
+      // halaman belum dibuka → tetap di kanan
+      p.style.transform = 'rotateY(0deg)';
+      p.style.zIndex = PAGE_Z_BASE + (pages.length - i);
+    }
+  });
+
+  // Halaman terakhir yang baru dibuka (atau terakhir balik) → paling atas
+  if (flippedCount > 0) {
+    const lastOpened = pages[flippedCount - 1];
+    lastOpened.style.zIndex = PAGE_Z_BASE + pages.length + 1;
+  }
+}
+
+
+    function shiftBook() {
+      // kalau ada halaman yang dibuka → geser & goyang kanan
+      if (flippedCount > 0 || !coverClosed) {
+        book.style.transform = "rotateX(15deg) rotateY(-5deg) translateX(40px)";
+      } else {
+        // balik ke posisi normal
+        book.style.transform = "rotateX(15deg) rotateY(0deg) translateX(0px)";
+      }
+    }
+
+    function nextPage() {
+  if (isAnimating) return;
+  if (coverClosed) {
+    isAnimating = true;
+    cover.style.zIndex = PAGE_Z_BASE + pages.length + 200;
+    cover.style.transform = 'rotateY(-180deg)';
+    cover.addEventListener("transitionend", function handler(e) {
+      if (e.propertyName !== "transform") return;
+      cover.removeEventListener("transitionend", handler);
+      cover.style.zIndex = COVER_BACK_Z;
+      coverClosed = false;
+      isAnimating = false;
+      shiftBook();
+    }, { once: true });
+    return;
+  }
+
+  if (flippedCount < pages.length) {
+    const p = pages[flippedCount];
+    isAnimating = true;
+    // kasih z-index tinggi selama animasi
+    p.style.zIndex = PAGE_Z_BASE + pages.length + 200;
+    flippedCount++;
+
+    p.addEventListener("transitionend", function handler(e) {
+      if (e.propertyName !== "transform") return;
+      p.removeEventListener("transitionend", handler);
+      updateStack();   // atur ulang setelah animasi selesai
+      isAnimating = false;
+      shiftBook();
+    }, { once: true });
+
+    updateStack();
+  }
+}
+
+function prevPage() {
+  if (isAnimating) return;
+
+  if (flippedCount > 0) {
+    const idx = flippedCount - 1;
+    const p = pages[idx];
+    isAnimating = true;
+    // kasih z-index tinggi selama animasi
+    p.style.zIndex = PAGE_Z_BASE + pages.length + 200;
+    flippedCount--;
+
+    p.addEventListener("transitionend", function handler(e) {
+      if (e.propertyName !== "transform") return;
+      p.removeEventListener("transitionend", handler);
+      updateStack();   // reset setelah animasi selesai
+      isAnimating = false;
+      shiftBook();
+    }, { once: true });
+
+    updateStack();
+    return;
+  }
+
+  if (!coverClosed) {
+    isAnimating = true;
+    cover.style.zIndex = PAGE_Z_BASE + pages.length + 200;
+    cover.style.transform = 'rotateY(0deg)';
+    cover.addEventListener("transitionend", function handler(e) {
+      if (e.propertyName !== "transform") return;
+      cover.removeEventListener("transitionend", handler);
+      cover.style.zIndex = COVER_FRONT_Z;
+      coverClosed = true;
+      isAnimating = false;
+      shiftBook();
+    }, { once: true });
+  }
+}
+
+    // swipe gesture
+    let startX = 0;
+    let moved = false;
+    book.addEventListener("touchstart", e => {
+      startX = e.touches[0].clientX;
+      moved = false;
+    }, { passive: true });
+
+    book.addEventListener("touchmove", e => {
+      if (e.cancelable) e.preventDefault();
+      moved = true;
+    }, { passive: false });
+
+    book.addEventListener("touchend", e => {
+      const endX = e.changedTouches[0].clientX;
+      const diff = startX - endX;
+      if (!moved) {
+        nextPage();
+        return;
+      }
+      if (diff > 50) nextPage();
+      else if (diff < -50) prevPage();
+    });
+
+    // desktop testing
+    book.addEventListener("click", e => {
+      if (moved) return;
+      nextPage();
+    });
+
+    initStack();
+  </script>
+</body>
+</html>
