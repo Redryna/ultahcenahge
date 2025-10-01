@@ -7,49 +7,70 @@
   <style>
     :root{--bg:#fdeef6;--panel:#fff;--accent:#ff6b9a}
     *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial}
-    body{background:linear-gradient(180deg,var(--bg),#fff)}
-    .wrap{display:flex;flex-direction:column;height:100%;gap:8px;padding:12px}
-    h1{font-size:20px;margin:0;color:#333;text-align:center}
+    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg),#fff)}
+    .wrap{display:flex;flex-direction:column;height:100%;padding:0}
+    h1{font-size:20px;margin:0;color:#333;text-align:center;padding:40px 6px 6px} /* kasih padding atas karena HUD fixed */
+
     button{background:var(--accent);color:white;border:0;padding:10px 14px;border-radius:10px;font-weight:600}
-    .game-area{position:relative;flex:1;border-radius:14px;background:linear-gradient(180deg,#fff,#ffeef6);overflow:hidden;border:2px solid rgba(0,0,0,0.1)}
+
+    .game-area{position:relative;flex:1;overflow:hidden;border:2px solid rgba(0,0,0,0.1);background:linear-gradient(180deg,#fff,#ffeef6)}
     .basket{position:absolute;bottom:10px;width:100px;height:60px;background:linear-gradient(180deg,#ffd7e3,#ffbcd0);border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 10px rgba(0,0,0,0.2)}
     .item{position:absolute;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px}
-    .hud{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
+
+    /* HUD fixed selalu di atas */
+    .hud{
+      position:fixed;
+      top:0;left:0;right:0;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:8px 12px;
+      background:rgba(255,255,255,0.9);
+      font-weight:bold;
+      font-size:16px;
+      z-index:3000;
+    }
+
     .inventory{display:flex;gap:6px;flex-wrap:wrap;padding:6px;background:#fff8;border-radius:10px}
     .inv-item{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
-    .center-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;background:#fff9;padding:16px;border-radius:12px;max-width:300px}
+
+    .center-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;background:#fff9;padding:16px;border-radius:12px;max-width:300px;z-index:2000}
     .center-overlay button{font-size:18px;padding:12px 20px;margin-top:10px}
     .center-overlay p{margin-top:8px;color:#333;font-weight:500}
+
     #scrapBtn{display:none;margin-top:8px}
-    #muteBtn{position:absolute;top:10px;right:10px;background:#fff;border:1px solid #ccc;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px}
-    #countdown{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:700;color:#ff2d55;display:none}
+    #muteBtn{position:fixed;top:50px;right:10px;background:#fff;border:1px solid #ccc;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;z-index:3000}
+    #countdown{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:700;color:#ff2d55;display:none;z-index:2500}
   </style>
 </head>
 <body>
 <div class="wrap" id="gameWrap">
-  <h1>🎁 Tangkap Hadiah 🎁</h1>
+  <!-- HUD fixed -->
   <div class="hud">
     <div>⏳ <span id="time">30</span>s</div>
     <div>⭐ <span id="score">0</span></div>
   </div>
 
+  <h1>🎁 Tangkap Hadiah 🎁</h1>
+
   <div class="game-area" id="gameArea">
     <div class="basket" id="basket">🧺</div>
+
     <!-- Overlay Start -->
     <div class="center-overlay" id="overlay">
       <h2>Cara Main</h2>
       <p>Geser jari kiri-kanan untuk menggerakkan keranjang.</p>
-      <p>Tangkap hadiah yang jatuh dan Kumpulkan 300 poin untuk membuka hadiah </p>
+      <p>Tangkap hadiah yang jatuh.</p>
+      <p>Kumpulkan 300 poin untuk membuka scrapbook!</p>
       <button id="startBtn">Mulai</button>
     </div>
-    <button id="muteBtn">🔊</button>
     <div id="countdown"></div>
   </div>
 
-  <h3>Inventory</h3>
+  <h3 style="padding:6px">Inventory</h3>
   <div class="inventory" id="inventory"></div>
   <button id="scrapBtn" onclick="location.href='gelo.html'">📖 Buka Scrapbook</button>
+  <button id="muteBtn">🔊</button>
 </div>
 
 <!-- BackSound & SFX -->
@@ -90,7 +111,7 @@ let width,height,basketX=0;
 let spawnTimer=null,gameTimer=null,left=GAME_TIME,score=0,active=false,muted=false;
 
 function recalc(){ let r=gameArea.getBoundingClientRect(); width=r.width; height=r.height; basketX=width/2-basket.offsetWidth/2; basket.style.left=basketX+'px' }
-window.addEventListener('resize',recalc); recalc(); renderInventory();
+window.addEventListener('resize',()=>{ recalc(); checkOrientation(); }); recalc(); renderInventory();
 
 // Kontrol drag (tekan & geser)
 let dragging=false;
@@ -133,8 +154,10 @@ function startGame(){
   if(active) return; 
   overlay.style.display='none';
 
-  // Fullscreen
+  // coba fullscreen
   if(gameWrap.requestFullscreen){ gameWrap.requestFullscreen(); }
+  // coba lock landscape
+  if(screen.orientation && screen.orientation.lock){ screen.orientation.lock("landscape").catch(()=>{}); }
 
   // Countdown
   let c=3;
@@ -174,7 +197,14 @@ muteBtn.addEventListener('click',()=>{
   if(muted){ bgm.pause(); muteBtn.textContent="🔇"; } 
   else { if(active){ bgm.play(); } muteBtn.textContent="🔊"; }
 });
+
+// cek orientasi
+function checkOrientation(){
+  if(window.innerHeight > window.innerWidth){
+    alert("Putar HP ke mode landscape untuk main lebih nyaman!");
+  }
+}
+checkOrientation();
 </script>
 </body>
 </html>
-
