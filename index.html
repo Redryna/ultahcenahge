@@ -157,18 +157,6 @@ function startGame(){
   if(active) return; 
   overlay.style.display='none';
 
-  // AUTO FULLSCREEN
-  if(gameWrap.requestFullscreen){ 
-    gameWrap.requestFullscreen().catch(()=>{}); 
-  }
-
-  // AUTO LANDSCAPE
-  if(screen.orientation && screen.orientation.lock){ 
-    screen.orientation.lock("landscape").catch(()=>{
-      alert("Silakan putar HP ke mode landscape untuk main lebih nyaman!");
-    }); 
-  }
-
   // Countdown
   let c=3;
   countdown.style.display='block';
@@ -210,5 +198,6 @@ muteBtn.addEventListener('click',()=>{
 </script>
 </body>
 </html>
+
 
 
