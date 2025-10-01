@@ -8,7 +8,8 @@
     :root{--bg:#fdeef6;--panel:#fff;--accent:#ff6b9a}
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial}
-    .wrap{display:flex;flex-direction:column;height:100%;gap:8px;padding:12px;background:linear-gradient(180deg,var(--bg),#fff)}
+    body{background:linear-gradient(180deg,var(--bg),#fff)}
+    .wrap{display:flex;flex-direction:column;height:100%;gap:8px;padding:12px}
     h1{font-size:20px;margin:0;color:#333;text-align:center}
     button{background:var(--accent);color:white;border:0;padding:10px 14px;border-radius:10px;font-weight:600}
     .game-area{position:relative;flex:1;border-radius:14px;background:linear-gradient(180deg,#fff,#ffeef6);overflow:hidden;border:2px solid rgba(0,0,0,0.1)}
@@ -17,15 +18,16 @@
     .hud{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
     .inventory{display:flex;gap:6px;flex-wrap:wrap;padding:6px;background:#fff8;border-radius:10px}
     .inv-item{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
-    .center-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
-    .center-overlay button{font-size:18px;padding:12px 20px}
-    .center-overlay p{margin-top:10px;color:#555;font-weight:600}
+    .center-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;background:#fff9;padding:16px;border-radius:12px;max-width:300px}
+    .center-overlay button{font-size:18px;padding:12px 20px;margin-top:10px}
+    .center-overlay p{margin-top:8px;color:#333;font-weight:500}
     #scrapBtn{display:none;margin-top:8px}
     #muteBtn{position:absolute;top:10px;right:10px;background:#fff;border:1px solid #ccc;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    #countdown{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:700;color:#ff2d55;display:none}
   </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" id="gameWrap">
   <h1>🎁 Tangkap Hadiah 🎁</h1>
   <div class="hud">
     <div>⏳ <span id="time">30</span>s</div>
@@ -36,11 +38,14 @@
     <div class="basket" id="basket">🧺</div>
     <!-- Overlay Start -->
     <div class="center-overlay" id="overlay">
+      <h2>Cara Main</h2>
+      <p>Geser jari kiri-kanan untuk menggerakkan keranjang.</p>
+      <p>Tangkap hadiah yang jatuh.</p>
+      <p>Kumpulkan 300 poin untuk membuka scrapbook!</p>
       <button id="startBtn">Mulai</button>
-      <p>KUMPULKAN POINT 300 UNTUK MEMBUKA SCRAPBOOK</p>
-      <p>Cara Bermain Tekan Keranjang Dan Dapatkan Item</p>
     </div>
     <button id="muteBtn">🔊</button>
+    <div id="countdown"></div>
   </div>
 
   <h3>Inventory</h3>
@@ -79,6 +84,8 @@ const scrapBtn=document.getElementById('scrapBtn');
 const catchSound=document.getElementById('catchSound');
 const bgm=document.getElementById('bgm');
 const muteBtn=document.getElementById('muteBtn');
+const countdown=document.getElementById('countdown');
+const gameWrap=document.getElementById('gameWrap');
 
 let width,height,basketX=0;
 let spawnTimer=null,gameTimer=null,left=GAME_TIME,score=0,active=false,muted=false;
@@ -86,9 +93,20 @@ let spawnTimer=null,gameTimer=null,left=GAME_TIME,score=0,active=false,muted=fal
 function recalc(){ let r=gameArea.getBoundingClientRect(); width=r.width; height=r.height; basketX=width/2-basket.offsetWidth/2; basket.style.left=basketX+'px' }
 window.addEventListener('resize',recalc); recalc(); renderInventory();
 
-function moveBasket(x){ let rect=gameArea.getBoundingClientRect(); let pos=x-rect.left-basket.offsetWidth/2; pos=Math.max(0,Math.min(pos,width-basket.offsetWidth)); basket.style.left=pos+'px' }
-gameArea.addEventListener('touchmove',e=>{ moveBasket(e.touches[0].clientX) });
-gameArea.addEventListener('click',e=>{ moveBasket(e.clientX) });
+// Kontrol drag (tekan & geser)
+let dragging=false;
+gameArea.addEventListener('touchstart',e=>{ dragging=true });
+gameArea.addEventListener('touchend',e=>{ dragging=false });
+gameArea.addEventListener('touchmove',e=>{
+  if(dragging){ moveBasket(e.touches[0].clientX); }
+});
+
+function moveBasket(x){ 
+  let rect=gameArea.getBoundingClientRect(); 
+  let pos=x-rect.left-basket.offsetWidth/2; 
+  pos=Math.max(0,Math.min(pos,width-basket.offsetWidth)); 
+  basket.style.left=pos+'px' 
+}
 
 function spawnItem(){
   let type=ITEM_TYPES[Math.floor(Math.random()*ITEM_TYPES.length)];
@@ -114,20 +132,41 @@ function catchItem(el,type){
 
 function startGame(){ 
   if(active) return; 
-  active=true; score=0;scoreEl.textContent=score;left=GAME_TIME;timeEl.textContent=left;
   overlay.style.display='none';
-  // play backsound
+
+  // Fullscreen
+  if(gameWrap.requestFullscreen){ gameWrap.requestFullscreen(); }
+
+  // Countdown
+  let c=3;
+  countdown.style.display='block';
+  countdown.textContent=c;
+  let timer=setInterval(()=>{
+    c--;
+    if(c>0){ countdown.textContent=c; }
+    else if(c===0){ countdown.textContent="GO!"; }
+    else{
+      clearInterval(timer);
+      countdown.style.display='none';
+      beginPlay();
+    }
+  },1000);
+}
+
+function beginPlay(){
+  active=true; score=0;scoreEl.textContent=score;left=GAME_TIME;timeEl.textContent=left;
   if(!muted){ bgm.currentTime=0; bgm.play(); }
   spawnTimer=setInterval(spawnItem,SPAWN_INTERVAL);
   gameTimer=setInterval(()=>{ left--; timeEl.textContent=left; if(left<=0) endGame() },1000);
   spawnItem();
 }
+
 function endGame(){ 
   active=false; 
   clearInterval(spawnTimer);clearInterval(gameTimer);
   spawnTimer=null;gameTimer=null;
   bgm.pause();
-  overlay.style.display='flex'; startBtn.disabled=false;
+  overlay.style.display='block'; startBtn.disabled=false;
 }
 
 startBtn.addEventListener('click',startGame);
