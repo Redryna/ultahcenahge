@@ -10,11 +10,11 @@ body {
 
 .book {
   position: relative;
-  width: 200px;   /* lebih kecil */
-  height: 280px;  /* lebih kecil */
+  width: 150px;   /* lebih kecil lagi */
+  height: 210px;  /* lebih kecil lagi */
   transform-style: preserve-3d;
   transform: rotateX(15deg);
-  transition: transform 0.8s ease; /* biar geser & goyang smooth */
+  transition: transform 0.8s ease;
   touch-action: none;
   user-select: none;
 }
@@ -22,8 +22,8 @@ body {
 /* COVER */
 .cover {
   position: absolute;
-  width: 200px;   /* disesuaikan */
-  height: 280px;  /* disesuaikan */
+  width: 150px;
+  height: 210px;
   transform-style: preserve-3d;
   transform-origin: center left;
   transform: rotateY(0deg);
@@ -35,14 +35,14 @@ body {
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  border-radius: 4px 12px 12px 4px; /* lebih kecil */
+  border-radius: 3px 8px 8px 3px;
 }
 .cover .back {
   position: absolute;
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  border-radius: 12px 4px 4px 12px; /* lebih kecil */
+  border-radius: 8px 3px 3px 8px;
 }
 .cover .front {
   background: #7B3F00;
@@ -51,7 +51,7 @@ body {
   justify-content: center;
   color: white;
   font-family: 'Georgia', serif;
-  font-size: 18px; /* lebih kecil */
+  font-size: 14px; /* lebih kecil */
   font-weight: bold;
   letter-spacing: 1px;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
@@ -64,10 +64,10 @@ body {
 /* BACK COVER */
 .back-cover {
   position: absolute;
-  width: 200px;
-  height: 280px;
+  width: 150px;
+  height: 210px;
   background: #7B3F00;
-  border-radius: 4px 12px 12px 4px;
+  border-radius: 3px 8px 8px 3px;
   z-index: -10;
   display: flex;
   align-items: center;
@@ -76,33 +76,29 @@ body {
 .back-cover .inner p {
   color: white;
   font-family: 'Georgia', serif;
-  font-size: 14px; /* lebih kecil */
+  font-size: 11px; /* lebih kecil */
   letter-spacing: 1px;
 }
 
 /* PAGE */
 .page {
   position: absolute;
-  width: 200px;
-  height: 280px;
+  width: 150px;
+  height: 210px;
   transform-style: preserve-3d;
   transform-origin: left;
   transform: rotateY(0deg);
   transition: transform 0.9s ease;
   z-index: -1;
-
-  /* efek bayangan */
-  box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
 
-/* waktu halaman dibalik kasih bayangan di sisi kiri */
 .page[style*="rotateY(-180deg)"] {
-  box-shadow: -1px 1px 3px rgba(0,0,0,0.4);
+  box-shadow: -1px 1px 2px rgba(0,0,0,0.4);
 }
 
-/* cover depan sama belakang juga bisa dikasih shadow */
 .cover .front, .cover .back, .back-cover {
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
 .page .front,
@@ -116,12 +112,12 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 4px 12px 12px 4px;
+  border-radius: 3px 8px 8px 3px;
 }
 .page .back img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 12px 4px 4px 12px;
+  border-radius: 8px 3px 3px 8px;
 }
 .page .back { transform: rotateY(180deg); }
